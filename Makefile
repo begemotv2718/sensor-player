@@ -26,7 +26,7 @@ STM32_LIBSRC=./stm32_lib/system_stm32f10x.c ./stm32_lib/stm32f10x_it.c
 STM32_LIBSRC+=./stm32_lib/stm32f10x_rcc.c ./stm32_lib/stm32f10x_gpio.c
 SRC=main.c
 
-OBJ=core_cm3.o system_stm32f10x.o stm32f10x_it.o startup_stm32f10x_md_vl.o
+OBJ=core_cm3.o system_stm32f10x.o startup_stm32f10x_md_vl.o
 OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o
 OBJ+=main.o
 
