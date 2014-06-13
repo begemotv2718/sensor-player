@@ -1,4 +1,4 @@
-BIN=stm32vldiscovery-linux-template
+BIN=myprogram
 
 TOOLS_PATH=/usr/
 TOOLS_PREFIX=arm-none-eabi-
