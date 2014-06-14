@@ -14,3 +14,7 @@ stlink/build/gdb-server.o
 stlink/build/st-util
 stlink/build/stlink-hw.d
 stlink/build/stlink-hw.o
+*.bin
+*.elf
+*.map
+cscope.out
