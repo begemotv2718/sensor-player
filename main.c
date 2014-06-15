@@ -7,6 +7,10 @@
 **/
 
 #include "stm32f10x.h"
+#include "stm32f10x_gpio.h"
+#include "stm32f10x_rcc.h"
+#include "stm32f10x_usart.h"
+
 
 
 volatile uint32_t TimingDelay;
@@ -22,47 +26,76 @@ void SysTick_Handler (void){
 }
 
 
+void usart_init() {
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOA, ENABLE);
+
+  GPIO_InitTypeDef GPIOA_init_params;
+
+  GPIO_StructInit(&GPIOA_init_params);
+
+  GPIOA_init_params.GPIO_Speed = GPIO_Speed_2MHz;
+
+  GPIOA_init_params.GPIO_Mode = GPIO_Mode_AF_PP;
+
+  GPIOA_init_params.GPIO_Pin = GPIO_Pin_9;
+
+  GPIO_Init(GPIOA,&GPIOA_init_params);
+
+  GPIOA_init_params.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+
+  GPIOA_init_params.GPIO_Pin = GPIO_Pin_10;
+
+  GPIO_Init(GPIOA, &GPIOA_init_params);
 
 
-void initialize_GPIOC() {
-  /* enable clocking on Port C */
-  GPIO_InitTypeDef GPIOC_init_params;
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+  USART_InitTypeDef USART_init_params;
 
-  /* Blue LED sits on PC[8] and Green LED sits on PC[9]*/
-  GPIOC_init_params.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9;
-  /* Output maximum frequency selection is 10 MHz.
-     Do not worry that internal oscillator of STM32F100RB
-     works on 8MHz frequency - Cortex-M3 core has a various
-     facilities to carefully tune the frequency for almost
-     peripheral devices.
-  */
-  GPIOC_init_params.GPIO_Speed = GPIO_Speed_2MHz;
-  /* Push-pull output.
-     Двухтактный выход.
-  */
-  GPIOC_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_Init(GPIOC, &GPIOC_init_params);
+  USART_StructInit(&USART_init_params);
+
+  USART_init_params.USART_BaudRate = 9600;
+
+  USART_init_params.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+
+  USART_Init(USART1,&USART_init_params);
+
+  USART_Cmd(USART1, ENABLE);
+}
+
+void usart_putc(int c){
+    while ( USART_GetFlagStatus (USART1 , USART_FLAG_TXE ) == RESET);
+    USART1->DR = (c & 0xff);
+}
+
+int usart_getc(void){
+  while ( USART_GetFlagStatus (USART1 , USART_FLAG_RXNE ) == RESET);
+  return USART1->DR && 0xff;
 }
 
 
+void usart_puts(char *str){
+  while(*str){
+    usart_putc(*str);
+    str++;
+  }
+}
+
+
+
+
 int main(void) {
-  uint8_t state_pin_9 =1 ;
 
 
   if(SysTick_Config(SystemCoreClock/1000)) while(1); // Initialize system timer
-  initialize_GPIOC();
 
+  usart_init();
   
 
 
   /* Set pins 8 and 9 at PORTC to high level */
-  GPIO_SetBits(GPIOC, GPIO_Pin_8);
   
   while (1) {
-    GPIO_WriteBit(GPIOC, GPIO_Pin_9, (state_pin_9)? Bit_SET: Bit_RESET);
-    state_pin_9 = 1-state_pin_9;
-    Delay(100);
+    usart_puts("Hello, world!\n\r");
+    Delay(250);
   }
 }
 

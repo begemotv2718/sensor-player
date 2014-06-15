@@ -17,4 +17,6 @@ stlink/build/stlink-hw.o
 *.bin
 *.elf
 *.map
+*.o
 cscope.out
+.gdb_history

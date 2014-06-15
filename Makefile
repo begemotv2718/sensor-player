@@ -23,11 +23,11 @@ OBJCOPY=$(TOOLS_PATH)/bin/$(TOOLS_PREFIX)objcopy
 
 CMSISSRC=./cmsis/core_cm3.c
 STM32_LIBSRC=./stm32_lib/system_stm32f10x.c ./stm32_lib/stm32f10x_it.c
-STM32_LIBSRC+=./stm32_lib/stm32f10x_rcc.c ./stm32_lib/stm32f10x_gpio.c
+STM32_LIBSRC+=./stm32_lib/stm32f10x_rcc.c ./stm32_lib/stm32f10x_gpio.c ./stm32_lib/stm32f10x_usart.c
 SRC=main.c
 
 OBJ=core_cm3.o system_stm32f10x.o startup_stm32f10x_md_vl.o
-OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o
+OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o stm32f10x_usart.o
 OBJ+=main.o
 
 all: ccmsis cstm32_lib cc ldall
