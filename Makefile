@@ -28,7 +28,7 @@ SRC=main.c
 
 OBJ=core_cm3.o system_stm32f10x.o startup_stm32f10x_md_vl.o
 OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o stm32f10x_usart.o
-OBJ+=main.o
+OBJ+=usart.o main.o
 
 all: ccmsis cstm32_lib cc ldall
 	$(SIZE) -B $(BIN).elf
@@ -43,11 +43,14 @@ cstm32_lib: $(STM32_LIBSRC)
 cc: $(SRC)
 	$(CC) $(CFLAGS) $(SRC)
 
-ldall:
+ldall: $(OBJ)
 	$(CC) $(OBJ) $(LDFLAGS)
 
 %.bin:%.elf
 	$(OBJCOPY) -Obinary $(*).elf $(*).bin 
+
+%.o:%.c
+	$(CC) $(CFLAGS) $<
 
 .PHONY: clean load
 
