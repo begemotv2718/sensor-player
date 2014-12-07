@@ -2,7 +2,7 @@ BIN=myprogram
 
 TOOLS_PATH=/usr/
 TOOLS_PREFIX=arm-none-eabi-
-TOOLS_VERSION=4.7.4
+TOOLS_VERSION=4.8.4
 
 CFLAGS=-c -mcpu=cortex-m3 -mthumb -Wall -O0 -mapcs-frame -D__thumb2__=1 
 CFLAGS+=-msoft-float -gdwarf-2 -mno-sched-prolog -fno-hosted -mtune=cortex-m3 
