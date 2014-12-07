@@ -5,7 +5,6 @@
   @date    22-Aug-2011
   @brief   Template of Linux project for STM32VLDiscovery
 **/
-
 #include "stm32f10x.h"
 #include "usart.h"
 #include "spi.h"
