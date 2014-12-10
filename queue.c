@@ -2,6 +2,13 @@
 #include "queue.h"
 #include <string.h>
 
+static inline int QueueFull(struct Queue *q){
+  return  (q->pWR+1)%QUEUE_SIZE == q->pRD;
+}
+static inline int QueueEmpty(struct Queue *q){
+  return  q->pWR == q->pRD;
+}
+
 int Enqueue(struct Queue *q, uint8_t data){
   if(QueueFull(q)){
     return 0;
@@ -12,7 +19,7 @@ int Enqueue(struct Queue *q, uint8_t data){
   return 1;
 }
 
-int Deque(struct Queue *q, uint8_t *data){
+int Dequeue(struct Queue *q, uint8_t *data){
   if(QueueEmpty(q)){
     return 0;
   }

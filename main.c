@@ -7,7 +7,7 @@
 **/
 #include "stm32f10x.h"
 #include "usart.h"
-#include "spi.h"
+//#include "spi.h"
 
 
 volatile uint32_t TimingDelay;
@@ -26,11 +26,12 @@ void SysTick_Handler (void){
 
 void usart_puts(USART_TypeDef *USARTx, char *str){
   while(*str){
-    usart_putc(USARTx,*str);
+    usart_putc(USARTx,(uint8_t)*str);
     str++;
   }
 }
 
+/*
 void spiInitSS(){
   GPIO_InitTypeDef GPIO_init;
   GPIO_StructInit(&GPIO_init);
@@ -40,18 +41,18 @@ void spiInitSS(){
   GPIO_init.GPIO_Pin = GPIO_Pin_4;
   GPIO_Init(GPIOA, &GPIO_init);
 }
-
+*/
 uint8_t txbuf[10], rxbuf[10];
 
 int main(void) {
-  const uint8_t *str = "Hello\n";
+  const char *str = "Hello\n";
 
   if(SysTick_Config(SystemCoreClock/1000)) while(1); // Initialize system timer
 
   usart_open(USART1,9600);
   
-  spiInitSS();
-  spiInit(SPI1);
+  //spiInitSS();
+  //spiInit(SPI1);
 
 
   /* Set pins 8 and 9 at PORTC to high level */
@@ -62,7 +63,7 @@ int main(void) {
       rxbuf[i]=0;
     }
     GPIO_WriteBit(GPIOA,GPIO_Pin_4,0);
-    spiReadWrite(SPI1,rxbuf,txbuf,7,SPI_SLOW);
+    //spiReadWrite(SPI1,rxbuf,txbuf,7,SPI_SLOW);
     GPIO_WriteBit(GPIOA,GPIO_Pin_4,1);
     usart_puts(USART1, rxbuf);
     Delay(250);
