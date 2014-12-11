@@ -26,7 +26,7 @@ void SysTick_Handler (void){
 
 void usart_puts(USART_TypeDef *USARTx, char *str){
   while(*str){
-    usart_putc(USARTx,(uint8_t)*str);
+    usart_putc((uint8_t)*str);
     str++;
   }
 }
@@ -57,7 +57,7 @@ int main(void) {
   int i;
   while (1) {
     //GPIO_WriteBit(GPIOA,GPIO_Pin_4,0);
-    usart_puts(USART1,"Hello, world!!!\r\n");
+    usart_puts(USART1,"Hello, World!!!\r\n");
     //GPIO_WriteBit(GPIOA,GPIO_Pin_4,1);
     Delay(250);
   }
