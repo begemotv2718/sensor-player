@@ -19,7 +19,6 @@ int usart_getc(USART_TypeDef *usart){
 
 void usart_putc(USART_TypeDef *usart, int c){
   while(! Enqueue(&UART_TXq,c));
-  uint8_t data;
   if(!TxReenable){
     TxReenable = 1;
     USART_ITConfig(usart, USART_IT_TXE, ENABLE);
@@ -39,6 +38,7 @@ void USARTx_Handler(USART_TypeDef *usart){
     if(Dequeue(&UART_TXq,&data)){
        USART_SendData(USART1, data);
     }else{
+      USART_ITConfig(usart, USART_IT_TXE, DISABLE);
       TxReenable = 0;
     }
   }
@@ -97,20 +97,19 @@ void usart_open(USART_TypeDef *usart, int baud_rate) {
 }
 
 void usart_close(USART_TypeDef *usart){
-  USART_DeInit(usart);
   USART_ITConfig(usart,USART_IT_RXNE, DISABLE);
   USART_ITConfig(usart,USART_IT_TXE, DISABLE);
+  USART_DeInit(usart);
 }
 
 
-/*
-void usart_putc(USART_TypeDef *usart, int c){
+
+void usart_putc_old(USART_TypeDef *usart, int c){
     while ( USART_GetFlagStatus (usart , USART_FLAG_TXE ) == RESET);
     usart->DR = (c & 0xff);
 }
 
-int usart_getc(USART_TypeDef *usart){
+int usart_getc_old(USART_TypeDef *usart){
   while ( USART_GetFlagStatus (usart , USART_FLAG_RXNE ) == RESET);
   return usart->DR && 0xff;
 }
-*/

@@ -45,27 +45,20 @@ void spiInitSS(){
 uint8_t txbuf[10], rxbuf[10];
 
 int main(void) {
-  const char *str = "Hello\n";
+  const char *str = "Hello\r\n";
 
   if(SysTick_Config(SystemCoreClock/1000)) while(1); // Initialize system timer
 
   usart_open(USART1,9600);
   
-  //spiInitSS();
-  //spiInit(SPI1);
 
 
   /* Set pins 8 and 9 at PORTC to high level */
   int i;
   while (1) {
-    for(i=0;i<sizeof(str);i++){
-      txbuf[i]=str[i];
-      rxbuf[i]=0;
-    }
-    GPIO_WriteBit(GPIOA,GPIO_Pin_4,0);
-    //spiReadWrite(SPI1,rxbuf,txbuf,7,SPI_SLOW);
-    GPIO_WriteBit(GPIOA,GPIO_Pin_4,1);
-    usart_puts(USART1, rxbuf);
+    //GPIO_WriteBit(GPIOA,GPIO_Pin_4,0);
+    usart_puts(USART1,"Hello, world!!!\r\n");
+    //GPIO_WriteBit(GPIOA,GPIO_Pin_4,1);
     Delay(250);
   }
 }
