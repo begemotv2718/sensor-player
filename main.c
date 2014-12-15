@@ -7,6 +7,8 @@
 **/
 #include "stm32f10x.h"
 #include "usart.h"
+#include "adc.h"
+#include "xprintf.h"
 //#include "spi.h"
 
 
@@ -22,7 +24,20 @@ void SysTick_Handler (void){
     TimingDelay --;
 }
 
+static GPIO_TypeDef *GPIO_port;
+static uint16_t GPIO_control_pin;
 
+void init_GPIOC_pin(void){
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC| RCC_APB2Periph_GPIOA, ENABLE);
+  GPIO_InitTypeDef GPIO_init_params;
+  GPIO_StructInit(&GPIO_init_params);
+
+
+  GPIO_init_params.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
+  GPIO_init_params.GPIO_Pin = GPIO_control_pin;
+  GPIO_Init(GPIO_port, &GPIO_init_params);
+}
 
 void usart_puts(USART_TypeDef *USARTx, char *str){
   while(*str){
@@ -31,35 +46,45 @@ void usart_puts(USART_TypeDef *USARTx, char *str){
   }
 }
 
-/*
-void spiInitSS(){
-  GPIO_InitTypeDef GPIO_init;
-  GPIO_StructInit(&GPIO_init);
-
-  GPIO_init.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_init.GPIO_Mode = GPIO_Mode_AF_PP;
-  GPIO_init.GPIO_Pin = GPIO_Pin_4;
-  GPIO_Init(GPIOA, &GPIO_init);
-}
-*/
-uint8_t txbuf[10], rxbuf[10];
-
 int main(void) {
-  const char *str = "Hello\r\n";
+  xfunc_in = usart_getc;
+  xfunc_out = usart_putc;
+  GPIO_port = GPIOC;
+  GPIO_control_pin = GPIO_Pin_5; 
 
-  if(SysTick_Config(SystemCoreClock/1000)) while(1); // Initialize system timer
+  if(SysTick_Config(SystemCoreClock/100000)) while(1); // Initialize system timer
+  init_adc();
+  init_GPIOC_pin();
 
   usart_open(USART1,9600);
   
 
 
-  /* Set pins 8 and 9 at PORTC to high level */
   int i;
   while (1) {
-    //GPIO_WriteBit(GPIOA,GPIO_Pin_4,0);
-    usart_puts(USART1,"Hello, World!!!\r\n");
-    //GPIO_WriteBit(GPIOA,GPIO_Pin_4,1);
-    Delay(250);
+    GPIO_WriteBit(GPIO_port,GPIO_control_pin,0);
+    uint16_t ain[10];
+    for(i=0; i<10;i++){
+      ain[i] = ADC_GetConversionValue(ADC1);
+      Delay(2);
+    }
+    xprintf("Switching to 0 adc value: ");
+    for(i=0;i<10;i++){
+      xprintf("%d ",ain[i]);
+    }
+    xprintf("\n");
+    Delay(800000);
+    GPIO_WriteBit(GPIO_port,GPIO_control_pin,1);
+    for(i=0; i<10;i++){
+      ain[i] = ADC_GetConversionValue(ADC1);
+      Delay(2);
+    }
+    xprintf("Switching to 1 adc value: ");
+    for(i=0;i<10;i++){
+      xprintf("%d ",ain[i]);
+    }
+    xprintf("\n");
+    Delay(800000);
   }
 }
 
