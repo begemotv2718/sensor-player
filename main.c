@@ -46,6 +46,15 @@ void usart_puts(USART_TypeDef *USARTx, char *str){
   }
 }
 
+void switch_to_1(void){
+    GPIO_WriteBit(GPIOC,GPIO_Pin_5,1);
+}
+
+void switch_to_0(void){
+    GPIO_WriteBit(GPIOC,GPIO_Pin_5,0);
+}
+
+
 int main(void) {
   xfunc_in = usart_getc;
   xfunc_out = usart_putc;
@@ -64,21 +73,16 @@ int main(void) {
   while (1) {
     GPIO_WriteBit(GPIO_port,GPIO_control_pin,0);
     uint16_t ain[10];
-    for(i=0; i<10;i++){
-      ain[i] = ADC_GetConversionValue(ADC1);
-      Delay(2);
-    }
+    start_conversion(10,ain,switch_to_0);
+    while(!conv_finished());
     xprintf("Switching to 0 adc value: ");
     for(i=0;i<10;i++){
       xprintf("%d ",ain[i]);
     }
     xprintf("\n");
     Delay(800000);
-    GPIO_WriteBit(GPIO_port,GPIO_control_pin,1);
-    for(i=0; i<10;i++){
-      ain[i] = ADC_GetConversionValue(ADC1);
-      Delay(2);
-    }
+    start_conversion(10,ain,switch_to_0);
+    while(!conv_finished());
     xprintf("Switching to 1 adc value: ");
     for(i=0;i<10;i++){
       xprintf("%d ",ain[i]);
