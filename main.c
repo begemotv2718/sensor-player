@@ -55,6 +55,9 @@ void switch_to_0(void){
 }
 
 
+void nop(void){
+}
+
 int main(void) {
   xfunc_in = usart_getc;
   xfunc_out = usart_putc;
@@ -70,25 +73,83 @@ int main(void) {
 
 
   int i;
+  xprintf("Starting conversion\n");
   while (1) {
     GPIO_WriteBit(GPIO_port,GPIO_control_pin,0);
     uint16_t ain[10];
+    uint16_t dain[9];
     start_conversion(10,ain,switch_to_0);
     while(!conv_finished());
+    /*
     xprintf("Switching to 0 adc value: ");
+    for(i=0;i<10;i++){
+      xprintf("%d ",ain[i]);
+    }
+    */
+    xprintf("\n");
+    for(i=0;i<9;i++){
+      dain[i]=ain[i]-ain[i+1];
+    }
+    xprintf("Switching to 0 Differences: ");
+    for(i=0; i<9; i++){
+      xprintf("%d ",dain[i]);
+    }
+    xprintf("\n");
+    Delay(500);
+    /*
+    start_conversion(10,ain,nop);
+    while(!conv_finished());
+    xprintf("Switching to 0 adc value after 1/1000 sec: ");
+    for(i=0;i<10;i++){
+      xprintf("%d ",ain[i]);
+    }
+    xprintf("\n");
+    Delay(10000);
+    start_conversion(10,ain,nop);
+    while(!conv_finished());
+    xprintf("Switching to 0 adc value after 1/10 sec: ");
     for(i=0;i<10;i++){
       xprintf("%d ",ain[i]);
     }
     xprintf("\n");
     Delay(800000);
-    start_conversion(10,ain,switch_to_0);
+    */
+    start_conversion(10,ain,switch_to_1);
     while(!conv_finished());
+    /*
     xprintf("Switching to 1 adc value: ");
     for(i=0;i<10;i++){
       xprintf("%d ",ain[i]);
     }
     xprintf("\n");
+    */
+    for(i=0;i<9;i++){
+      dain[i]=ain[i+1]-ain[i];
+    }
+    xprintf("Switching to 1 Differences: ");
+    for(i=0; i<9; i++){
+      xprintf("%d ",dain[i]);
+    }
+    xprintf("\n");
+    Delay(100500);
+    /*
+    start_conversion(10,ain,switch_to_1);
+    while(!conv_finished());
+    xprintf("Switching to 1 adc value after 1/1000 sec: ");
+    for(i=0;i<10;i++){
+      xprintf("%d ",ain[i]);
+    }
+    xprintf("\n");
+    Delay(10000);
+    start_conversion(10,ain,switch_to_1);
+    while(!conv_finished());
+    xprintf("Switching to 1 adc value after 2/10 sec: ");
+    for(i=0;i<10;i++){
+      xprintf("%d ",ain[i]);
+    }
+    xprintf("\n");
     Delay(800000);
+    */
   }
 }
 

@@ -23,11 +23,11 @@ OBJCOPY=$(TOOLS_PATH)/bin/$(TOOLS_PREFIX)objcopy
 
 CMSISSRC=./cmsis/core_cm3.c
 STM32_LIBSRC=./stm32_lib/system_stm32f10x.c ./stm32_lib/stm32f10x_it.c
-STM32_LIBSRC+=./stm32_lib/stm32f10x_rcc.c ./stm32_lib/stm32f10x_gpio.c ./stm32_lib/stm32f10x_usart.c ./stm32_lib/stm32f10x_adc.c ./stm32_lib/stm32f10x_spi.c ./stm32_lib/misc.c
+STM32_LIBSRC+=./stm32_lib/stm32f10x_rcc.c ./stm32_lib/stm32f10x_gpio.c ./stm32_lib/stm32f10x_usart.c ./stm32_lib/stm32f10x_adc.c ./stm32_lib/stm32f10x_tim.c ./stm32_lib/misc.c
 SRC=main.c
 
 OBJ=core_cm3.o system_stm32f10x.o startup_stm32f10x_md_vl.o
-OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o stm32f10x_usart.o stm32f10x_spi.o  stm32f10x_adc.o misc.o
+OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o stm32f10x_usart.o stm32f10x_spi.o  stm32f10x_adc.o stm32f10x_tim.o misc.o 
 OBJ+=usart.o queue.o main.o adc.o xprintf.o 
 
 all: ccmsis cstm32_lib cc ldall

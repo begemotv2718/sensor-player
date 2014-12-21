@@ -1,8 +1,8 @@
 #include "adc.h"
 
-uint16_t *conv_buffer;
-int buffer_size;
-void (*setup_conversion)(void); 
+static uint16_t *conv_buffer;
+static int buffer_size;
+static void (*setup_conversion)(void); 
 
 volatile int conversions_done;
 
@@ -14,6 +14,8 @@ void init_tim3(void){
   TIM_base_init.TIM_Period = 2-1;
   TIM_base_init.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(TIM3,&TIM_base_init);
+
+  TIM_SelectOutputTrigger(TIM3,TIM_TRGOSource_Update);
 
 }
 
@@ -74,7 +76,7 @@ void init_adc(void){
 
   ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 1, ADC_SampleTime_28Cycles5);
 
-  ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
+ // ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
   ADC_ExternalTrigConvCmd(ADC1,ENABLE);
 
   ADC_Cmd(ADC1, ENABLE);
@@ -82,9 +84,14 @@ void init_adc(void){
 
 
 void ADC1_IRQHandler(void){
+  if(!setup_conversion){
+    ADC_ClearITPendingBit(ADC1,ADC_IT_EOC);
+    return;
+  }
   if(conversions_done ==0){
     //call preparation function
     setup_conversion();
+    conv_buffer[conversions_done]=ADC1->DR;
   }else if(conversions_done<buffer_size){
     uint16_t ain;
     ain = ADC1->DR;
@@ -92,6 +99,7 @@ void ADC1_IRQHandler(void){
   }else{
     //Stop timer
     TIM_Cmd(TIM3,DISABLE);
+    ADC_ITConfig(ADC1,ADC_IT_EOC, DISABLE);
   }
 
   conversions_done++;
@@ -108,5 +116,6 @@ void start_conversion(int buf_size, uint16_t *conv_buf, void (*setup)(void)){
   setup_conversion=setup;
   conversions_done=0;
 
+  ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
   TIM_Cmd(TIM3,ENABLE);
 }
