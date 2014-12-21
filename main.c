@@ -37,6 +37,12 @@ void init_GPIOC_pin(void){
   GPIO_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_init_params.GPIO_Pin = GPIO_control_pin;
   GPIO_Init(GPIO_port, &GPIO_init_params);
+
+  /*LED port*/
+  GPIO_init_params.GPIO_Speed=GPIO_Speed_50MHz;
+  GPIO_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
+  GPIO_init_params.GPIO_Pin = GPIO_Pin_9;
+  GPIO_Init(GPIO_port, &GPIO_init_params);
 }
 
 void usart_puts(USART_TypeDef *USARTx, char *str){
@@ -58,6 +64,9 @@ void switch_to_0(void){
 void nop(void){
 }
 
+#define NSAMPLES 10
+#define NCYCLES 5
+
 int main(void) {
   xfunc_in = usart_getc;
   xfunc_out = usart_putc;
@@ -76,79 +85,57 @@ int main(void) {
   xprintf("Starting conversion\n");
   while (1) {
     GPIO_WriteBit(GPIO_port,GPIO_control_pin,0);
-    uint16_t ain[10];
-    uint16_t dain[9];
-    start_conversion(10,ain,switch_to_0);
-    while(!conv_finished());
+    uint16_t ain[NSAMPLES];
+    //uint16_t dain[NSAMPLES-1];
+    int16_t dav0[NSAMPLES-1];
+    int16_t dav1[NSAMPLES-1];
+    for(i=0;i<NSAMPLES-1;i++){
+      dav0[i]=0;
+    }
+    for(i=0;i<NSAMPLES-1;i++){
+      dav1[i]=0;
+    }
+    int cycle;
+    for(cycle=0;cycle<NCYCLES;cycle++){
+      start_conversion(NSAMPLES,ain,switch_to_0);
+      while(!conv_finished());
+      for(i=0;i<NSAMPLES-1;i++){
+        dav0[i]+=(int16_t)ain[i]-(int16_t)ain[i+1];
+      }
+      Delay(50);
+      start_conversion(NSAMPLES,ain,switch_to_1);
+      while(!conv_finished());
+      for(i=0;i<NSAMPLES-1;i++){
+        dav1[i]+=(int16_t)ain[i+1]-(int16_t)ain[i];
+      }
+    }
+    if(dav0[1]*100/NCYCLES<23000){
+      xprintf("Pressed!\n");
+      GPIO_WriteBit(GPIOC,GPIO_Pin_9,1);
+      xprintf("Switching to 0 Differences: ");
+      for(i=0; i<NSAMPLES-1; i++){
+        xprintf("%d ",dav0[i]*100/NCYCLES);
+      }
+      xprintf("\n");
+      xprintf("Switching to 1 Differences: ");
+      for(i=0; i<NSAMPLES-1; i++){
+        xprintf("%d ",dav1[i]*100/NCYCLES);
+      }
+      xprintf("\n");
+    }else{
+      GPIO_WriteBit(GPIOC,GPIO_Pin_9,0);
+    }
     /*
-    xprintf("Switching to 0 adc value: ");
-    for(i=0;i<10;i++){
-      xprintf("%d ",ain[i]);
-    }
-    */
-    xprintf("\n");
-    for(i=0;i<9;i++){
-      dain[i]=ain[i]-ain[i+1];
-    }
     xprintf("Switching to 0 Differences: ");
-    for(i=0; i<9; i++){
-      xprintf("%d ",dain[i]);
+    for(i=0; i<NSAMPLES-1; i++){
+      xprintf("%d ",dav0[i]*100/NCYCLES);
     }
     xprintf("\n");
-    Delay(500);
-    /*
-    start_conversion(10,ain,nop);
-    while(!conv_finished());
-    xprintf("Switching to 0 adc value after 1/1000 sec: ");
-    for(i=0;i<10;i++){
-      xprintf("%d ",ain[i]);
-    }
-    xprintf("\n");
-    Delay(10000);
-    start_conversion(10,ain,nop);
-    while(!conv_finished());
-    xprintf("Switching to 0 adc value after 1/10 sec: ");
-    for(i=0;i<10;i++){
-      xprintf("%d ",ain[i]);
-    }
-    xprintf("\n");
-    Delay(800000);
-    */
-    start_conversion(10,ain,switch_to_1);
-    while(!conv_finished());
-    /*
-    xprintf("Switching to 1 adc value: ");
-    for(i=0;i<10;i++){
-      xprintf("%d ",ain[i]);
-    }
-    xprintf("\n");
-    */
-    for(i=0;i<9;i++){
-      dain[i]=ain[i+1]-ain[i];
-    }
     xprintf("Switching to 1 Differences: ");
-    for(i=0; i<9; i++){
-      xprintf("%d ",dain[i]);
+    for(i=0; i<NSAMPLES-1; i++){
+      xprintf("%d ",dav1[i]*100/NCYCLES);
     }
     xprintf("\n");
-    Delay(100500);
-    /*
-    start_conversion(10,ain,switch_to_1);
-    while(!conv_finished());
-    xprintf("Switching to 1 adc value after 1/1000 sec: ");
-    for(i=0;i<10;i++){
-      xprintf("%d ",ain[i]);
-    }
-    xprintf("\n");
-    Delay(10000);
-    start_conversion(10,ain,switch_to_1);
-    while(!conv_finished());
-    xprintf("Switching to 1 adc value after 2/10 sec: ");
-    for(i=0;i<10;i++){
-      xprintf("%d ",ain[i]);
-    }
-    xprintf("\n");
-    Delay(800000);
     */
   }
 }
