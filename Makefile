@@ -28,7 +28,7 @@ SRC=main.c
 
 OBJ=core_cm3.o system_stm32f10x.o startup_stm32f10x_md_vl.o
 OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o stm32f10x_usart.o stm32f10x_spi.o  stm32f10x_adc.o stm32f10x_tim.o misc.o 
-OBJ+=usart.o queue.o main.o adc.o xprintf.o 
+OBJ+=usart.o queue.o main.o adc.o xprintf.o sqrt.o 
 
 all: ccmsis cstm32_lib cc ldall
 	$(SIZE) -B $(BIN).elf

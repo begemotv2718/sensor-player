@@ -10,6 +10,7 @@
 #include "adc.h"
 #include "xprintf.h"
 #include <string.h>
+#include "sqrt.h"
 //#include "spi.h"
 
 
@@ -66,7 +67,7 @@ void nop(void){
 }
 
 #define NSAMPLES 10
-#define NCYCLES 5
+#define NCYCLES 10
 #define INPUT_BUFFER_LEN 50
 
 int16_t dav0[NSAMPLES-1];
@@ -111,15 +112,16 @@ void normal_operate(int32_t threshold ){
 #define MEASUREMENT_CYCLES 100
 void report_measurement(){
   int i,j;
-  int32_t sum;
-  int32_t sumsq;
-  int32_t min;
-  int32_t max;
+  uint64_t sum;
+  uint64_t sumsq;
+  uint32_t min;
+  uint32_t max;
+  uint32_t sqrt;
   sum=0;
   sumsq=0;
-  min = 1000000;
+  min = 0xffffffff;
   max =0;
-  for(j=1;j<MEASUREMENT_CYCLES;j++){
+  for(j=1;j<=MEASUREMENT_CYCLES;j++){
     do_measurement_cycle(dav0,dav1);
     sum+=dav0[1];
     sumsq+=dav0[1]*dav0[1];
@@ -140,10 +142,13 @@ void report_measurement(){
       xprintf("%d ",dav1[i]*100/NCYCLES);
     }
     xprintf("\n");
-    xprintf("j=%d sum = %d sumsq=%d\n",j,sum,sumsq);
+    xprintf("j=%d sum = %u sumsq=%u\n",j,(uint32_t)sum,(uint32_t)sumsq);
   }
-  xprintf("Average %d min %d max %d \n",sum/MEASUREMENT_CYCLES,min,max);
-
+  xprintf("Average %u min %u max %u \n",(uint32_t)(sum*100/(MEASUREMENT_CYCLES*NCYCLES)),min*100/NCYCLES,max*100/NCYCLES);
+  xprintf("Square of sum %lu\n",sum*sum);
+  xprintf("N^2*sigma^2 = %u\n", (uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum));
+  xprintf("uint_sqrt(%u)=%u\n",(uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum),uint_sqrt((uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum)));
+  xprintf("sigma=%u\n",uint_sqrt((uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum))*100/(MEASUREMENT_CYCLES*NCYCLES));
 }  
 
 
