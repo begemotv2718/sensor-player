@@ -6,4 +6,5 @@ int usart_open(USART_TypeDef *usart, int baud_rate);
 void usart_close();
 void usart_putc(int c);
 int usart_getc();
+int usart_poll_getc(uint8_t *data);
 

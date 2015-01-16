@@ -17,6 +17,10 @@ int usart_getc(){
   
 }
 
+int usart_poll_getc(uint8_t *data){
+  return Dequeue(&UART_RXq,data);
+}
+
 void usart_putc(int c){
   while(! Enqueue(&UART_TXq,c));
   if(!TxReenable){
