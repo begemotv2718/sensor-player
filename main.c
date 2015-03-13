@@ -98,14 +98,16 @@ void do_measurement_cycle(int16_t *dav0, int16_t *dav1){
     }
 }
 
-void normal_operate(int32_t threshold ){
+uint16_t normal_operate(int32_t threshold ){
     do_measurement_cycle(dav0,dav1);
     //uint16_t dain[NSAMPLES-1];
     if(dav0[1]*100/NCYCLES<threshold){
       xprintf("Pressed!\n");
-      GPIO_WriteBit(GPIOC,GPIO_Pin_9,1);
+      //GPIO_WriteBit(GPIOC,GPIO_Pin_9,1);
+      return 1;
     }else{
-      GPIO_WriteBit(GPIOC,GPIO_Pin_9,0);
+      //GPIO_WriteBit(GPIOC,GPIO_Pin_9,0);
+      return 0;
     }
 }
 
@@ -152,7 +154,7 @@ void report_measurement(){
 }  
 
 
-enum state_t {ST_NORMAL, ST_MEASURE, ST_SET, ST_COMMAND_LOOP} state;
+enum state_t {ST_NORMAL, ST_MEASURE, ST_SET, ST_COMMAND_LOOP, ST_PRESSED} state;
 
 int main(void) {
   xfunc_in = usart_getc;
@@ -170,21 +172,28 @@ int main(void) {
 
 
   uint8_t ch;
-  int32_t threshold = 23000; 
+  int32_t threshold = 60000; 
   char buffer[INPUT_BUFFER_LEN];
   char *conv_pointer;
   xprintf("Starting conversion\n");
   GPIO_WriteBit(GPIO_port,GPIO_control_pin,0);
   uint16_t j=0;
+  
   while (1) {
     switch(state){
+      case ST_PRESSED:
+          GPIO_WriteBit(GPIOC,GPIO_Pin_9,1);
+          Delay(200000);
+          GPIO_WriteBit(GPIOC,GPIO_Pin_9,0);
+          state=ST_NORMAL;
+          
       case ST_NORMAL:
-        normal_operate(threshold);
+        if(normal_operate(threshold)) state= ST_PRESSED;
         if(usart_poll_getc(&ch)){
           if(ch == 13 || ch == 10){
             state = ST_COMMAND_LOOP;
           }
-          xprintf("Read character %d",(int32_t)ch);
+          //xprintf("Read character %d",(int32_t)ch);
         }
         /*
         j++;

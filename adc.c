@@ -6,6 +6,13 @@ static void (*setup_conversion)(void);
 
 volatile int conversions_done;
 
+struct adc_channel {
+  GPIO_TypeDef *port;
+  uint16_t pin;
+  uint8_t channel;
+}; 
+
+
 void init_tim3(void){
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
   TIM_TimeBaseInitTypeDef TIM_base_init;
