@@ -95,6 +95,7 @@ void do_measurement_cycle(int16_t *dav0, int16_t *dav1){
       for(i=0;i<NSAMPLES-1;i++){
         dav1[i]+=(int16_t)ain[i+1]-(int16_t)ain[i];
       }
+      Delay(1060);
     }
 }
 
@@ -111,7 +112,7 @@ uint16_t normal_operate(int32_t threshold ){
     }
 }
 
-#define MEASUREMENT_CYCLES 100
+#define MEASUREMENT_CYCLES 2500
 void report_measurement(){
   int i,j;
   uint64_t sum;
