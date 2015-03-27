@@ -67,42 +67,55 @@ void nop(void){
 }
 
 #define NSAMPLES 10
-#define NCYCLES 10
-#define INPUT_BUFFER_LEN 50
+#define NCYCLES 128
+#define INPUT_BUFFER_LEN 250
 
-int16_t dav0[NSAMPLES-1];
-int16_t dav1[NSAMPLES-1];
+int16_t dav0[NSAMPLES-1][NCYCLES];
+int16_t dav1[NSAMPLES-1][NCYCLES];
 
-void do_measurement_cycle(int16_t *dav0, int16_t *dav1){
+void do_measurement_cycle(int16_t dav0[][NCYCLES], int16_t dav1[][NCYCLES]){
     uint16_t ain[NSAMPLES];
-    int i;
+    int i,j;
     for(i=0;i<NSAMPLES-1;i++){
-      dav0[i]=0;
+      for(j=0;j<NCYCLES;j++){
+        dav0[i][j]=0;
+      }
     }
     for(i=0;i<NSAMPLES-1;i++){
-      dav1[i]=0;
+      for(j=0;j<NCYCLES;j++){
+        dav1[i][j]=0;
+      }
     }
+    xprintf("Cycle\n");
     int cycle;
     for(cycle=0;cycle<NCYCLES;cycle++){
       start_conversion(NSAMPLES,ain,switch_to_0);
       while(!conv_finished());
       for(i=0;i<NSAMPLES-1;i++){
-        dav0[i]+=(int16_t)ain[i]-(int16_t)ain[i+1];
+        dav0[i][cycle]=(int16_t)ain[i]-(int16_t)ain[i+1];
       }
       Delay(50);
       start_conversion(NSAMPLES,ain,switch_to_1);
       while(!conv_finished());
       for(i=0;i<NSAMPLES-1;i++){
-        dav1[i]+=(int16_t)ain[i+1]-(int16_t)ain[i];
+        dav1[i][cycle]=(int16_t)ain[i+1]-(int16_t)ain[i];
       }
-      Delay(1060);
+      Delay(50);
     }
+}
+
+int32_t process_measure( int16_t d[]){
+  int i;
+  int32_t sum=0;
+  for(i=0;i<NCYCLES;i++)
+    sum+=d[i];
+  return sum*100/NCYCLES;
 }
 
 uint16_t normal_operate(int32_t threshold ){
     do_measurement_cycle(dav0,dav1);
     //uint16_t dain[NSAMPLES-1];
-    if(dav0[1]*100/NCYCLES<threshold){
+    if(process_measure(dav0[1])<threshold){
       xprintf("Pressed!\n");
       //GPIO_WriteBit(GPIOC,GPIO_Pin_9,1);
       return 1;
@@ -119,30 +132,30 @@ void report_measurement(){
   uint64_t sumsq;
   uint32_t min;
   uint32_t max;
-  uint32_t sqrt;
   sum=0;
   sumsq=0;
   min = 0xffffffff;
   max =0;
-  for(j=1;j<=MEASUREMENT_CYCLES;j++){
-    do_measurement_cycle(dav0,dav1);
-    sum+=dav0[1];
-    sumsq+=dav0[1]*dav0[1];
-    if(min>dav0[1]){
-      min=dav0[1];
+  xprintf("Starting measurement\n");
+  do_measurement_cycle(dav0,dav1);
+  for(j=1;j<=NCYCLES;j++){
+    sum+=dav0[1][j];
+    sumsq+=dav0[1][j]*dav0[1][j];
+    if(min>dav0[1][j]){
+      min=dav0[1][j];
     }
-    if(max<dav0[1]){
-      max=dav0[1];
+    if(max<dav0[1][j]){
+      max=dav0[1][j];
     }
     xprintf("Switching to 0 Differences: ");
     int i;
     for(i=0; i<NSAMPLES-1; i++){
-      xprintf("%d ",dav0[i]*100/NCYCLES);
+      xprintf("%d ",dav0[i][j]);
     }
     xprintf("\n");
     xprintf("Switching to 1 Differences: ");
     for(i=0; i<NSAMPLES-1; i++){
-      xprintf("%d ",dav1[i]*100/NCYCLES);
+      xprintf("%d ",dav1[i][j]);
     }
     xprintf("\n");
     xprintf("j=%d sum = %u sumsq=%u\n",j,(uint32_t)sum,(uint32_t)sumsq);
@@ -162,7 +175,7 @@ int main(void) {
   xfunc_out = usart_putc;
   GPIO_port = GPIOC;
   GPIO_control_pin = GPIO_Pin_5; 
-  state =ST_NORMAL;
+  state =ST_COMMAND_LOOP;
 
   if(SysTick_Config(SystemCoreClock/100000)) while(1); // Initialize system timer
   init_adc();
@@ -173,12 +186,11 @@ int main(void) {
 
 
   uint8_t ch;
-  int32_t threshold = 60000; 
+  int32_t threshold = 0; 
   char buffer[INPUT_BUFFER_LEN];
   char *conv_pointer;
   xprintf("Starting conversion\n");
   GPIO_WriteBit(GPIO_port,GPIO_control_pin,0);
-  uint16_t j=0;
   
   while (1) {
     switch(state){
