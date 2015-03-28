@@ -10,6 +10,7 @@
 #include "adc.h"
 #include "xprintf.h"
 #include <string.h>
+#include <stdlib.h>
 #include "sqrt.h"
 //#include "spi.h"
 
@@ -54,6 +55,23 @@ void usart_puts(USART_TypeDef *USARTx, char *str){
   }
 }
 
+int cmpint16_t(const void *a, const void *b){
+  int16_t va,vb;
+  va=*(int16_t*)a;
+  vb=*(int16_t*)b;
+  if(va==vb) return 0;
+  return va>vb?1:-1;
+}
+
+int16_t median(int16_t arr[], int16_t nmemb){
+  qsort(arr,nmemb,sizeof(int16_t),cmpint16_t);
+  if(nmemb%2==0){
+    return (arr[nmemb/2]+arr[nmemb/2+1])/2;
+  }else{
+    return (arr[nmemb/2]);
+  }
+}
+
 void switch_to_1(void){
     GPIO_WriteBit(GPIOC,GPIO_Pin_5,1);
 }
@@ -67,7 +85,7 @@ void nop(void){
 }
 
 #define NSAMPLES 10
-#define NCYCLES 128
+#define NCYCLES 10
 #define INPUT_BUFFER_LEN 250
 
 int16_t dav0[NSAMPLES-1][NCYCLES];
@@ -86,7 +104,6 @@ void do_measurement_cycle(int16_t dav0[][NCYCLES], int16_t dav1[][NCYCLES]){
         dav1[i][j]=0;
       }
     }
-    xprintf("Cycle\n");
     int cycle;
     for(cycle=0;cycle<NCYCLES;cycle++){
       start_conversion(NSAMPLES,ain,switch_to_0);
@@ -105,11 +122,7 @@ void do_measurement_cycle(int16_t dav0[][NCYCLES], int16_t dav1[][NCYCLES]){
 }
 
 int32_t process_measure( int16_t d[]){
-  int i;
-  int32_t sum=0;
-  for(i=0;i<NCYCLES;i++)
-    sum+=d[i];
-  return sum*100/NCYCLES;
+  return median(d,NCYCLES);
 }
 
 uint16_t normal_operate(int32_t threshold ){
@@ -125,46 +138,48 @@ uint16_t normal_operate(int32_t threshold ){
     }
 }
 
-#define MEASUREMENT_CYCLES 2500
+#define MEASUREMENT_CYCLES 400
 void report_measurement(){
-  int i,j;
+  int j;
   uint64_t sum;
   uint64_t sumsq;
   uint32_t min;
   uint32_t max;
+  uint16_t val;
   sum=0;
   sumsq=0;
   min = 0xffffffff;
   max =0;
   xprintf("Starting measurement\n");
-  do_measurement_cycle(dav0,dav1);
-  for(j=1;j<=NCYCLES;j++){
-    sum+=dav0[1][j];
-    sumsq+=dav0[1][j]*dav0[1][j];
-    if(min>dav0[1][j]){
-      min=dav0[1][j];
+  for(j=1;j<=MEASUREMENT_CYCLES;j++){
+    do_measurement_cycle(dav0,dav1);
+    val =median(dav0[1],NCYCLES);
+    sum+=val;
+    sumsq+=val*val;
+    if(min>val){
+      min=val;
     }
-    if(max<dav0[1][j]){
-      max=dav0[1][j];
+    if(max<val){
+      max=val;
     }
     xprintf("Switching to 0 Differences: ");
     int i;
     for(i=0; i<NSAMPLES-1; i++){
-      xprintf("%d ",dav0[i][j]);
+      xprintf("%d ",median(dav0[i],NCYCLES));
     }
     xprintf("\n");
     xprintf("Switching to 1 Differences: ");
     for(i=0; i<NSAMPLES-1; i++){
-      xprintf("%d ",dav1[i][j]);
+      xprintf("%d ",median(dav1[i],NCYCLES));
     }
     xprintf("\n");
     xprintf("j=%d sum = %u sumsq=%u\n",j,(uint32_t)sum,(uint32_t)sumsq);
   }
-  xprintf("Average %u min %u max %u \n",(uint32_t)(sum*100/(MEASUREMENT_CYCLES*NCYCLES)),min*100/NCYCLES,max*100/NCYCLES);
+  xprintf("Average %u min %u max %u \n",(uint32_t)(sum/(MEASUREMENT_CYCLES)),min,max);
   xprintf("Square of sum %lu\n",sum*sum);
   xprintf("N^2*sigma^2 = %u\n", (uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum));
   xprintf("uint_sqrt(%u)=%u\n",(uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum),uint_sqrt((uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum)));
-  xprintf("sigma=%u\n",uint_sqrt((uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum))*100/(MEASUREMENT_CYCLES*NCYCLES));
+  xprintf("sigma=%u\n",uint_sqrt((uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum))/(MEASUREMENT_CYCLES));
 }  
 
 
