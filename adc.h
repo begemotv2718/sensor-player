@@ -1,3 +1,5 @@
+#ifndef ADC_H
+#define ADC_H
 #include "stm32f10x.h"
 #include "stm32f10x_gpio.h"
 #include "stm32f10x_rcc.h"
@@ -6,6 +8,15 @@
 #include "stm32f10x_conf.h"
 #include <misc.h>
 
+struct adc_channel {
+  GPIO_TypeDef *pp_port;
+  uint16_t pp_pin;
+  GPIO_TypeDef *adc_port;
+  uint16_t adc_pin;
+  uint8_t channel;
+}; 
+
 void init_adc(void);
 void start_conversion(int buf_size, uint16_t *conv_buf, void (*setup)(void));
 int conv_finished(void);
+#endif

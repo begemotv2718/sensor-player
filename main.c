@@ -27,19 +27,16 @@ void SysTick_Handler (void){
     TimingDelay --;
 }
 
-static GPIO_TypeDef *GPIO_port;
-static uint16_t GPIO_control_pin;
+struct adc_channel operation_channels[] = {
+  {},
+  {},
+};
 
 void init_GPIOC_pin(void){
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC| RCC_APB2Periph_GPIOA, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOB| RCC_APB2Periph_GPIOA, ENABLE);
   GPIO_InitTypeDef GPIO_init_params;
   GPIO_StructInit(&GPIO_init_params);
 
-
-  GPIO_init_params.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_init_params.GPIO_Pin = GPIO_control_pin;
-  GPIO_Init(GPIO_port, &GPIO_init_params);
 
   /*LED port*/
   GPIO_init_params.GPIO_Speed=GPIO_Speed_50MHz;
@@ -72,36 +69,41 @@ int16_t median(int16_t arr[], int16_t nmemb){
   }
 }
 
-void switch_to_1(void){
-    GPIO_WriteBit(GPIOC,GPIO_Pin_5,1);
+void switch_to_1(struct adc_channel *ch){
+    GPIO_WriteBit(ch->pp_port,ch->pp_pin,1);
 }
 
-void switch_to_0(void){
-    GPIO_WriteBit(GPIOC,GPIO_Pin_5,0);
+void switch_to_0(struct adc_channel *ch){
+    GPIO_WriteBit(ch->pp_port,ch->pp_pin,0);
 }
 
 
 void nop(void){
 }
 
-#define NSAMPLES 10
+#define NSAMPLES 4 
 #define NCYCLES 10
+#define NCHANNELS 1
 #define INPUT_BUFFER_LEN 250
 
-int16_t dav0[NSAMPLES-1][NCYCLES];
-int16_t dav1[NSAMPLES-1][NCYCLES];
+int16_t dav0[NCHANNELS][NSAMPLES-1][NCYCLES];
+int16_t dav1[NCHANNELS][NSAMPLES-1][NCYCLES];
 
 void do_measurement_cycle(int16_t dav0[][NCYCLES], int16_t dav1[][NCYCLES]){
     uint16_t ain[NSAMPLES];
-    int i,j;
-    for(i=0;i<NSAMPLES-1;i++){
-      for(j=0;j<NCYCLES;j++){
-        dav0[i][j]=0;
+    int i,j,k;
+    for(k=0;k<NCHANNELS;k++){
+      for(i=0;i<NSAMPLES-1;i++){
+        for(j=0;j<NCYCLES;j++){
+          dav0[k][i][j]=0;
+        }
       }
     }
-    for(i=0;i<NSAMPLES-1;i++){
-      for(j=0;j<NCYCLES;j++){
-        dav1[i][j]=0;
+    for(k=0;k<NCHANNELS;k++){
+      for(i=0;i<NSAMPLES-1;i++){
+        for(j=0;j<NCYCLES;j++){
+          dav1[k][i][j]=0;
+        }
       }
     }
     int cycle;

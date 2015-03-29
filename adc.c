@@ -2,16 +2,12 @@
 
 static uint16_t *conv_buffer;
 static int buffer_size;
-static void (*setup_conversion)(void); 
+static void (*setup_conversion)(struct adc_channel *channel); 
 
 volatile int conversions_done;
 
-struct adc_channel {
-  GPIO_TypeDef *port;
-  uint16_t pin;
-  uint8_t channel;
-}; 
 
+struct adc_channel *adc_ch;
 
 void init_tim3(void){
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
@@ -26,42 +22,46 @@ void init_tim3(void){
 
 }
 
-void init_adc(void){
+void init_adc(struct adc_channel *chlist){
   /*Currently configure port C, ADC channel 10 */
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC |RCC_APB2Periph_GPIOA, ENABLE);
 
-  GPIO_InitTypeDef GPIO_init_params;
-  GPIO_StructInit(&GPIO_init_params);
-  GPIO_TypeDef *GPIO_port;
-  uint16_t GPIO_adc_pin;
-  GPIO_port = GPIOA;
-  GPIO_adc_pin = GPIO_Pin_6; 
+  while(chlist !=NULL){
+    GPIO_InitTypeDef GPIO_init_params;
+    GPIO_StructInit(&GPIO_init_params);
+
+    GPIO_init_params.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_init_params.GPIO_Mode = GPIO_Mode_AIN;
+    GPIO_init_params.GPIO_Pin = chlist->adc_pin;
+    GPIO_Init(chlist->adc_port, &GPIO_init_params);
+
+    ADC_InitTypeDef ADC_config;
+
+    ADC_config.ADC_Mode = ADC_Mode_Independent;
+    ADC_config.ADC_ScanConvMode = DISABLE;
+    ADC_config.ADC_ContinuousConvMode = ENABLE;
+    ADC_config.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
+    ADC_config.ADC_DataAlign = ADC_DataAlign_Right;
+    ADC_config.ADC_NbrOfChannel = 1;
 
 
-  GPIO_init_params.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_init_params.GPIO_Mode = GPIO_Mode_AIN;
-  GPIO_init_params.GPIO_Pin = GPIO_adc_pin;
-  GPIO_Init(GPIO_port, &GPIO_init_params);
 
-  ADC_InitTypeDef ADC_config;
+    ADC_Init(ADC1, &ADC_config);
+    ADC_RegularChannelConfig(ADC1, chlist->channel, 1, ADC_SampleTime_28Cycles5);
+    ADC_Cmd(ADC1, ENABLE);
+    while(ADC_GetResetCalibrationStatus(ADC1));
+    ADC_StartCalibration(ADC1);
+    while(ADC_GetCalibrationStatus(ADC1));
+    ADC_Cmd(ADC1, DISABLE);
+    
 
-  ADC_config.ADC_Mode = ADC_Mode_Independent;
-  ADC_config.ADC_ScanConvMode = DISABLE;
-  ADC_config.ADC_ContinuousConvMode = ENABLE;
-  ADC_config.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
-  ADC_config.ADC_DataAlign = ADC_DataAlign_Right;
-  ADC_config.ADC_NbrOfChannel = 1;
+    GPIO_StructInit(&GPIO_init_params);
+    GPIO_init_params.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_init_params.GPIO_Pin = chlist->pp_pin;
+    GPIO_Init(chlist->pp_port, &GPIO_init_params);
 
-  ADC_Init(ADC1, &ADC_config);
-
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 1, ADC_SampleTime_28Cycles5);
-
-  ADC_Cmd(ADC1, ENABLE);
-
-  while(ADC_GetResetCalibrationStatus(ADC1));
-  ADC_StartCalibration(ADC1);
-  while(ADC_GetCalibrationStatus(ADC1));
-  ADC_Cmd(ADC1, DISABLE);
+  }
 
   init_tim3();
 
@@ -81,12 +81,6 @@ void init_adc(void){
 
   ADC_Init(ADC1, &ADC_config);
 
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 1, ADC_SampleTime_28Cycles5);
-
- // ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
-  ADC_ExternalTrigConvCmd(ADC1,ENABLE);
-
-  ADC_Cmd(ADC1, ENABLE);
 }  
 
 
@@ -97,7 +91,7 @@ void ADC1_IRQHandler(void){
   }
   if(conversions_done ==0){
     //call preparation function
-    setup_conversion();
+    setup_conversion(adc_ch);
     conv_buffer[conversions_done]=ADC1->DR;
   }else if(conversions_done<buffer_size){
     uint16_t ain;
@@ -117,12 +111,19 @@ int conv_finished(void){
   return conversions_done>=buffer_size;
 }
 
-void start_conversion(int buf_size, uint16_t *conv_buf, void (*setup)(void)){  
+void start_conversion(int buf_size, uint16_t *conv_buf, struct adc_channel *channel, void (*setup)(uint8_t)){  
   conv_buffer=conv_buf;
   buffer_size = buf_size;
   setup_conversion=setup;
   conversions_done=0;
+  adc_ch=channel;
 
+  ADC_RegularChannelConfig(ADC1, channel->channel, 1, ADC_SampleTime_28Cycles5);
+
+ // ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
+  ADC_ExternalTrigConvCmd(ADC1,ENABLE);
+
+  ADC_Cmd(ADC1, ENABLE);
   ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
   TIM_Cmd(TIM3,ENABLE);
 }
