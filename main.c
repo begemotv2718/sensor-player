@@ -27,7 +27,8 @@ void SysTick_Handler (void){
     TimingDelay --;
 }
 
-struct adc_channel operation_channels[] = {
+#define NCHANNELS 1
+struct adc_channel operation_channels[NCHANNELS+1] = {
   {
     .pp_port = GPIOC,
     .pp_pin = GPIO_Pin_5,
@@ -91,7 +92,6 @@ void nop(void){
 
 #define NSAMPLES 4 
 #define NCYCLES 10
-#define NCHANNELS 1
 #define INPUT_BUFFER_LEN 250
 #define CHANNEL_DELAY 4
 

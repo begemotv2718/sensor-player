@@ -42,6 +42,7 @@ void init_adc(struct adc_channel *chlist){
     GPIO_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_init_params.GPIO_Pin = chlist->pp_pin;
     GPIO_Init(chlist->pp_port, &GPIO_init_params);
+    chlist++;
 
   }
   ADC_InitTypeDef ADC_config;
