@@ -24,9 +24,9 @@ void init_tim3(void){
 
 void init_adc(struct adc_channel *chlist){
   /*Currently configure port C, ADC channel 10 */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC |RCC_APB2Periph_GPIOA, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC |RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB, ENABLE);
 
-  while(chlist !=NULL){
+  while(chlist->adc_port !=NULL){
     GPIO_InitTypeDef GPIO_init_params;
     GPIO_StructInit(&GPIO_init_params);
 
@@ -35,24 +35,6 @@ void init_adc(struct adc_channel *chlist){
     GPIO_init_params.GPIO_Pin = chlist->adc_pin;
     GPIO_Init(chlist->adc_port, &GPIO_init_params);
 
-    ADC_InitTypeDef ADC_config;
-
-    ADC_config.ADC_Mode = ADC_Mode_Independent;
-    ADC_config.ADC_ScanConvMode = DISABLE;
-    ADC_config.ADC_ContinuousConvMode = ENABLE;
-    ADC_config.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
-    ADC_config.ADC_DataAlign = ADC_DataAlign_Right;
-    ADC_config.ADC_NbrOfChannel = 1;
-
-
-
-    ADC_Init(ADC1, &ADC_config);
-    ADC_RegularChannelConfig(ADC1, chlist->channel, 1, ADC_SampleTime_28Cycles5);
-    ADC_Cmd(ADC1, ENABLE);
-    while(ADC_GetResetCalibrationStatus(ADC1));
-    ADC_StartCalibration(ADC1);
-    while(ADC_GetCalibrationStatus(ADC1));
-    ADC_Cmd(ADC1, DISABLE);
     
 
     GPIO_StructInit(&GPIO_init_params);
@@ -62,6 +44,24 @@ void init_adc(struct adc_channel *chlist){
     GPIO_Init(chlist->pp_port, &GPIO_init_params);
 
   }
+  ADC_InitTypeDef ADC_config;
+
+  ADC_config.ADC_Mode = ADC_Mode_Independent;
+  ADC_config.ADC_ScanConvMode = DISABLE;
+  ADC_config.ADC_ContinuousConvMode = ENABLE;
+  ADC_config.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
+  ADC_config.ADC_DataAlign = ADC_DataAlign_Right;
+  ADC_config.ADC_NbrOfChannel = 1;
+
+
+
+  ADC_Init(ADC1, &ADC_config);
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 1, ADC_SampleTime_28Cycles5);
+  ADC_Cmd(ADC1, ENABLE);
+  while(ADC_GetResetCalibrationStatus(ADC1));
+  ADC_StartCalibration(ADC1);
+  while(ADC_GetCalibrationStatus(ADC1));
+  ADC_Cmd(ADC1, DISABLE);
 
   init_tim3();
 
@@ -111,7 +111,7 @@ int conv_finished(void){
   return conversions_done>=buffer_size;
 }
 
-void start_conversion(int buf_size, uint16_t *conv_buf, struct adc_channel *channel, void (*setup)(uint8_t)){  
+void start_conversion(int buf_size, uint16_t *conv_buf, struct adc_channel *channel, void (*setup)(struct adc_channel *)){  
   conv_buffer=conv_buf;
   buffer_size = buf_size;
   setup_conversion=setup;

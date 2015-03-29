@@ -28,8 +28,16 @@ void SysTick_Handler (void){
 }
 
 struct adc_channel operation_channels[] = {
-  {},
-  {},
+  {
+    .pp_port = GPIOC,
+    .pp_pin = GPIO_Pin_5,
+    .adc_port = GPIOA,
+    .adc_pin = GPIO_Pin_6,
+    .channel = ADC_Channel_6 
+  },
+  {
+    .adc_port =NULL
+  }
 };
 
 void init_GPIOC_pin(void){
@@ -42,7 +50,7 @@ void init_GPIOC_pin(void){
   GPIO_init_params.GPIO_Speed=GPIO_Speed_50MHz;
   GPIO_init_params.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_init_params.GPIO_Pin = GPIO_Pin_9;
-  GPIO_Init(GPIO_port, &GPIO_init_params);
+  GPIO_Init(GPIOC, &GPIO_init_params);
 }
 
 void usart_puts(USART_TypeDef *USARTx, char *str){
@@ -85,41 +93,46 @@ void nop(void){
 #define NCYCLES 10
 #define NCHANNELS 1
 #define INPUT_BUFFER_LEN 250
+#define CHANNEL_DELAY 4
 
 int16_t dav0[NCHANNELS][NSAMPLES-1][NCYCLES];
 int16_t dav1[NCHANNELS][NSAMPLES-1][NCYCLES];
 
-void do_measurement_cycle(int16_t dav0[][NCYCLES], int16_t dav1[][NCYCLES]){
+void do_measurement_cycle(int16_t dav0[][NSAMPLES-1][NCYCLES], int16_t dav1[][NSAMPLES-1][NCYCLES]){
     uint16_t ain[NSAMPLES];
-    int i,j,k;
-    for(k=0;k<NCHANNELS;k++){
+    int i,j,ch;
+    for(ch=0;ch<NCHANNELS;ch++){
       for(i=0;i<NSAMPLES-1;i++){
         for(j=0;j<NCYCLES;j++){
-          dav0[k][i][j]=0;
+          dav0[ch][i][j]=0;
         }
       }
     }
-    for(k=0;k<NCHANNELS;k++){
+    for(ch=0;ch<NCHANNELS;ch++){
       for(i=0;i<NSAMPLES-1;i++){
         for(j=0;j<NCYCLES;j++){
-          dav1[k][i][j]=0;
+          dav1[ch][i][j]=0;
         }
       }
     }
     int cycle;
     for(cycle=0;cycle<NCYCLES;cycle++){
-      start_conversion(NSAMPLES,ain,switch_to_0);
-      while(!conv_finished());
-      for(i=0;i<NSAMPLES-1;i++){
-        dav0[i][cycle]=(int16_t)ain[i]-(int16_t)ain[i+1];
+      for(ch=0;ch<NCHANNELS;ch++){
+        start_conversion(NSAMPLES,ain,&operation_channels[ch],switch_to_0);
+        while(!conv_finished());
+        for(i=0;i<NSAMPLES-1;i++){
+          dav0[ch][i][cycle]=(int16_t)ain[i]-(int16_t)ain[i+1];
+        }
       }
-      Delay(50);
-      start_conversion(NSAMPLES,ain,switch_to_1);
-      while(!conv_finished());
-      for(i=0;i<NSAMPLES-1;i++){
-        dav1[i][cycle]=(int16_t)ain[i+1]-(int16_t)ain[i];
+      Delay(60-CHANNEL_DELAY*NCHANNELS);
+      for(ch=0;ch<NCHANNELS;ch++){
+        start_conversion(NSAMPLES,ain,&operation_channels[ch],switch_to_1);
+        while(!conv_finished());
+        for(i=0;i<NSAMPLES-1;i++){
+          dav1[ch][i][cycle]=(int16_t)ain[i+1]-(int16_t)ain[i];
+        }
       }
-      Delay(50);
+      Delay(60-CHANNEL_DELAY*NCHANNELS);
     }
 }
 
@@ -127,61 +140,68 @@ int32_t process_measure( int16_t d[]){
   return median(d,NCYCLES);
 }
 
-uint16_t normal_operate(int32_t threshold ){
+uint16_t normal_operate(int32_t *threshold ){
+    int ch;
+
     do_measurement_cycle(dav0,dav1);
-    //uint16_t dain[NSAMPLES-1];
-    if(process_measure(dav0[1])<threshold){
-      xprintf("Pressed!\n");
-      //GPIO_WriteBit(GPIOC,GPIO_Pin_9,1);
-      return 1;
-    }else{
-      //GPIO_WriteBit(GPIOC,GPIO_Pin_9,0);
-      return 0;
+    for(ch=0;ch<NCHANNELS;ch++){
+      if(process_measure(dav0[ch][1])<threshold[ch]){
+        xprintf("Pressed!\n");
+        return ch+1;
+      }
     }
+    return 0;
 }
 
 #define MEASUREMENT_CYCLES 400
 void report_measurement(){
   int j;
-  uint64_t sum;
-  uint64_t sumsq;
-  uint32_t min;
-  uint32_t max;
+  uint64_t sum[NCHANNELS];
+  uint64_t sumsq[NCHANNELS];
+  uint32_t min[NCHANNELS];
+  uint32_t max[NCHANNELS];
   uint16_t val;
-  sum=0;
-  sumsq=0;
-  min = 0xffffffff;
-  max =0;
+  int chn;
+  for(chn=0;chn<NCHANNELS;chn++){
+    sum[chn]=0;
+    sumsq[chn]=0;
+    min[chn] = 0xffffffff;
+    max[chn] =0;
+  }
   xprintf("Starting measurement\n");
   for(j=1;j<=MEASUREMENT_CYCLES;j++){
     do_measurement_cycle(dav0,dav1);
-    val =median(dav0[1],NCYCLES);
-    sum+=val;
-    sumsq+=val*val;
-    if(min>val){
-      min=val;
+    for(chn=0;chn<NCHANNELS;chn++){
+      val =median(dav0[chn][1],NCYCLES);
+      sum[chn]+=val;
+      sumsq[chn]+=val*val;
+      if(min[chn]>val){
+        min[chn]=val;
+      }
+      if(max[chn]<val){
+        max[chn]=val;
+      }
+      xprintf("Switching to 0 Differences channel %d: ",chn);
+      int i;
+      for(i=0; i<NSAMPLES-1; i++){
+        xprintf("%d ",median(dav0[chn][i],NCYCLES));
+      }
+      xprintf("\n");
+      xprintf("Switching to 1 Differences channel %d: ",chn);
+      for(i=0; i<NSAMPLES-1; i++){
+        xprintf("%d ",median(dav1[chn][i],NCYCLES));
+      }
+      xprintf("\n");
+      xprintf("j=%d channel=%d sum = %u sumsq=%u\n",j,chn,(uint32_t)sum[chn],(uint32_t)sumsq[chn]);
     }
-    if(max<val){
-      max=val;
-    }
-    xprintf("Switching to 0 Differences: ");
-    int i;
-    for(i=0; i<NSAMPLES-1; i++){
-      xprintf("%d ",median(dav0[i],NCYCLES));
-    }
-    xprintf("\n");
-    xprintf("Switching to 1 Differences: ");
-    for(i=0; i<NSAMPLES-1; i++){
-      xprintf("%d ",median(dav1[i],NCYCLES));
-    }
-    xprintf("\n");
-    xprintf("j=%d sum = %u sumsq=%u\n",j,(uint32_t)sum,(uint32_t)sumsq);
   }
-  xprintf("Average %u min %u max %u \n",(uint32_t)(sum/(MEASUREMENT_CYCLES)),min,max);
-  xprintf("Square of sum %lu\n",sum*sum);
-  xprintf("N^2*sigma^2 = %u\n", (uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum));
-  xprintf("uint_sqrt(%u)=%u\n",(uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum),uint_sqrt((uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum)));
-  xprintf("sigma=%u\n",uint_sqrt((uint32_t)(sumsq*MEASUREMENT_CYCLES-sum*sum))/(MEASUREMENT_CYCLES));
+  for(chn=0;chn<NCHANNELS;chn++){
+    xprintf("Channel %d Average %u min %u max %u \n",chn,(uint32_t)(sum[chn]/(MEASUREMENT_CYCLES)),min[chn],max[chn]);
+    xprintf("Square of sum %lu\n",sum[chn]*sum[chn]);
+    xprintf("N^2*sigma^2 = %u\n", (uint32_t)(sumsq[chn]*MEASUREMENT_CYCLES-sum[chn]*sum[chn]));
+    xprintf("uint_sqrt(%u)=%u\n",(uint32_t)(sumsq[chn]*MEASUREMENT_CYCLES-sum[chn]*sum[chn]),uint_sqrt((uint32_t)(sumsq[chn]*MEASUREMENT_CYCLES-sum[chn]*sum[chn])));
+    xprintf("sigma=%u\n",uint_sqrt((uint32_t)(sumsq[chn]*MEASUREMENT_CYCLES-sum[chn]*sum[chn]))/(MEASUREMENT_CYCLES));
+  }
 }  
 
 
@@ -190,12 +210,12 @@ enum state_t {ST_NORMAL, ST_MEASURE, ST_SET, ST_COMMAND_LOOP, ST_PRESSED} state;
 int main(void) {
   xfunc_in = usart_getc;
   xfunc_out = usart_putc;
-  GPIO_port = GPIOC;
-  GPIO_control_pin = GPIO_Pin_5; 
+  GPIO_TypeDef *GPIO_port = GPIOC;
+  uint16_t GPIO_control_pin = GPIO_Pin_5; 
   state =ST_COMMAND_LOOP;
 
   if(SysTick_Config(SystemCoreClock/100000)) while(1); // Initialize system timer
-  init_adc();
+  init_adc(operation_channels);
   init_GPIOC_pin();
 
   usart_open(USART1,9600);
@@ -203,7 +223,8 @@ int main(void) {
 
 
   uint8_t ch;
-  int32_t threshold = 0; 
+  int32_t selected_channel;
+  int32_t threshold[NCHANNELS]={0}; 
   char buffer[INPUT_BUFFER_LEN];
   char *conv_pointer;
   xprintf("Starting conversion\n");
@@ -218,7 +239,12 @@ int main(void) {
           state=ST_NORMAL;
           
       case ST_NORMAL:
-        if(normal_operate(threshold)) state= ST_PRESSED;
+        selected_channel=normal_operate(threshold);
+        if(selected_channel){
+          state= ST_PRESSED;
+          selected_channel--;
+        }
+
         if(usart_poll_getc(&ch)){
           if(ch == 13 || ch == 10){
             state = ST_COMMAND_LOOP;
@@ -243,8 +269,11 @@ int main(void) {
           state=ST_NORMAL;
         }else if(strncmp(buffer,"set",3)==0){
           conv_pointer+=3;
-          if(!xatoi(&conv_pointer,&threshold)){
-            threshold=23000;
+          if(xatoi(&conv_pointer,&selected_channel)){
+            xprintf("Setting threshold of %d channel\n",selected_channel);
+            if(!xatoi(&conv_pointer,&threshold[selected_channel])){
+              threshold[selected_channel]=700;
+            }
           }
         }
         break;
