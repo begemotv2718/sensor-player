@@ -81,6 +81,9 @@ void init_adc(struct adc_channel *chlist){
   ADC_config.ADC_NbrOfChannel = 1;
 
   ADC_Init(ADC1, &ADC_config);
+  ADC_ExternalTrigConvCmd(ADC1,ENABLE);
+
+  ADC_Cmd(ADC1, ENABLE);
 
 }  
 
@@ -122,9 +125,9 @@ void start_conversion(int buf_size, uint16_t *conv_buf, struct adc_channel *chan
   ADC_RegularChannelConfig(ADC1, channel->channel, 1, ADC_SampleTime_28Cycles5);
 
  // ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
-  ADC_ExternalTrigConvCmd(ADC1,ENABLE);
+  //ADC_ExternalTrigConvCmd(ADC1,ENABLE);
 
-  ADC_Cmd(ADC1, ENABLE);
+  //ADC_Cmd(ADC1, ENABLE);
   ADC_ITConfig(ADC1,ADC_IT_EOC, ENABLE);
   TIM_Cmd(TIM3,ENABLE);
 }
