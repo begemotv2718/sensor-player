@@ -27,7 +27,7 @@ void SysTick_Handler (void){
     TimingDelay --;
 }
 
-#define NCHANNELS 1
+#define NCHANNELS 2
 struct adc_channel operation_channels[NCHANNELS+1] = {
   {
     .pp_port = GPIOC,
@@ -35,6 +35,13 @@ struct adc_channel operation_channels[NCHANNELS+1] = {
     .adc_port = GPIOA,
     .adc_pin = GPIO_Pin_6,
     .channel = ADC_Channel_6 
+  },
+  {
+    .pp_port = GPIOC,
+    .pp_pin = GPIO_Pin_4,
+    .adc_port = GPIOA,
+    .adc_pin = GPIO_Pin_5,
+    .channel = ADC_Channel_5 
   },
   {
     .adc_port =NULL
@@ -204,8 +211,16 @@ void report_measurement(){
   }
 }  
 
-
-enum state_t {ST_NORMAL, ST_MEASURE, ST_SET, ST_COMMAND_LOOP, ST_PRESSED} state;
+/**
+ * @brief State machine states
+ */
+enum state_t { 
+  ST_NORMAL, /**<Continuos operation cycle, nothing pressed */
+  ST_MEASURE,/**<Measure values*/ 
+  ST_SET,
+  ST_COMMAND_LOOP,/**< Command prompt on UART port, reading commands */
+  ST_PRESSED /**<One sensor is pressed*/
+} state;
 
 int main(void) {
   xfunc_in = usart_getc;
