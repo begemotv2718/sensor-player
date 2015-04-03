@@ -12,10 +12,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include "sqrt.h"
+#include "fatfs/ff.h"
+#include "fatfs/ffconf.h"
 //#include "spi.h"
 
-
+#define TIMERPROCWAIT 1000
+extern void disk_timerproc(void);
 volatile uint32_t TimingDelay;
+volatile uint16_t TimerProcRemaining;
 
 void Delay(uint32_t delay){
   TimingDelay = delay;
@@ -25,6 +29,12 @@ void Delay(uint32_t delay){
 void SysTick_Handler (void){
   if ( TimingDelay != 0x00)
     TimingDelay --;
+  if(TimerProcRemaining != 0x00){
+    TimerProcRemaining--;
+  }else{
+    TimerProcRemaining=TIMERPROCWAIT;
+    disk_timerproc();
+  }
 }
 
 #define NCHANNELS 2
@@ -47,6 +57,11 @@ struct adc_channel operation_channels[NCHANNELS+1] = {
     .adc_port =NULL
   }
 };
+
+FATFS FatFs;
+FIL File[2];
+FILINFO fno;
+DIR Dir;
 
 void init_GPIOC_pin(void){
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOB| RCC_APB2Periph_GPIOA, ENABLE);
@@ -289,6 +304,24 @@ int main(void) {
             if(!xatoi(&conv_pointer,&threshold[selected_channel])){
               threshold[selected_channel]=700;
             }
+          }
+        }else if(strncmp(buffer,"ls",2)==0){
+          if(f_mount(&FatFs,"",1)==FR_OK){
+            xprintf("Mount success\n");
+            if(f_opendir(&Dir,"")==FR_OK){
+              xprintf("Root opened ok\n");
+              while(1){
+                int res=f_readdir(&Dir,&fno);
+                if(res!=FR_OK || !fno.fname[0]) break; 
+                xprintf("- %s\n",fno.fname);
+              }
+              f_closedir(&Dir);
+            }else{
+              xprintf("Root open failed\n");
+            }
+            f_mount(&FatFs,"",0);
+          }else{
+            xprintf("Mount failed\n");
           }
         }
         break;
