@@ -860,7 +860,7 @@ DRESULT disk_write (
 	BYTE drv,			/* Physical drive number (0) */
 	const BYTE *buff,	/* Pointer to the data to be written */
 	DWORD sector,		/* Start sector number (LBA) */
-	BYTE count			/* Sector count (1..255) */
+	UINT count			/* Sector count (1..255) */
 )
 {
 	if (drv || !count) return RES_PARERR;
@@ -1063,3 +1063,23 @@ RAMFUNC void disk_timerproc (void)
 	}
 }
 
+DWORD get_fattime ()
+{
+
+	/* Get local time */
+	//if (!rtc_gettime(&rtc)) return 0;
+    int year=2015;
+    int month=3;
+    int mday=2;
+    int hour=0;
+    int min=0;
+    int sec=0;
+
+	/* Pack date and time into a DWORD variable */
+	return	  ((DWORD)(year - 1980) << 25)
+			| ((DWORD)month << 21)
+			| ((DWORD)mday << 16)
+			| ((DWORD)hour << 11)
+			| ((DWORD)min << 5)
+			| ((DWORD)sec >> 1);
+}

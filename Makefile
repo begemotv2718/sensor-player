@@ -38,7 +38,7 @@ FATFSOBJ=$(subst ./fatfs/,,$(FATFSOBJ1))
 all: $(BIN).elf
 
 
-$(BIN).elf: ccmsis cstm32_lib cc ldall
+$(BIN).elf: ccmsis cstm32_lib cc ldall fatfs
 	$(SIZE) -B $(BIN).elf
 
 ccmsis: $(CMSISSRC)
@@ -48,10 +48,10 @@ cstm32_lib: $(STM32_LIBSRC)
 	$(CC) $(CFLAGS) $(STM32_LIBSRC)
 	$(AS) $(ASFLAGS) ./stm32_lib/device_support/gcc/startup_stm32f10x_md_vl.S -o startup_stm32f10x_md_vl.o
 
-#fatfs: $(FATFSOBJ)
+fatfs: $(FATFSOBJ)
 
-#$(FATFSOBJ): $(FATSRC)
-#	$(CC) $(CFLAGS) $(FATSRC)
+$(FATFSOBJ): $(FATSRC)
+	$(CC) $(CFLAGS) $(FATSRC)
 
 cc: $(SRC)
 	$(CC) $(CFLAGS) $(SRC)
@@ -64,6 +64,8 @@ ldall: $(OBJ) $(FATFSOBJ)
 
 %.o:%.c
 	$(CC) $(CFLAGS) $<
+
+fatfs/ff.c: fatfs/ffconf.h fatfs/ff.h
 
 .PHONY: clean load
 

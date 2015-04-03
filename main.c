@@ -257,6 +257,27 @@ int main(void) {
   int32_t threshold[NCHANNELS]={0}; 
   char buffer[INPUT_BUFFER_LEN];
   char *conv_pointer;
+  
+  /*Reading threshold settings from the card*/
+  if(f_mount(&FatFs,"",1)==FR_OK){
+    xprintf("Mount success\n");
+    if(f_open(&File[0],"SETTINGS.DAT",FA_READ)==FR_OK){
+      unsigned int actual;
+      xprintf("Settings opened ok, reading threshold data\n");
+      f_read(&File[0],threshold,NCHANNELS*sizeof(int32_t),&actual);
+      if(actual<NCHANNELS*sizeof(int32_t)){
+        xprintf("Error reading thresholds, expect problems\n");
+      }
+      f_close(&File[0]);
+    }else{
+      xprintf("Settings open failed\n");
+    }
+    f_mount(&FatFs,"",0);
+  }else{
+    xprintf("Mount failed\n");
+  }
+
+
   xprintf("Starting conversion\n");
   GPIO_WriteBit(GPIO_port,GPIO_control_pin,0);
   
@@ -305,23 +326,28 @@ int main(void) {
               threshold[selected_channel]=700;
             }
           }
-        }else if(strncmp(buffer,"ls",2)==0){
+        }else if(strncmp(buffer,"save",4)==0){
           if(f_mount(&FatFs,"",1)==FR_OK){
             xprintf("Mount success\n");
-            if(f_opendir(&Dir,"")==FR_OK){
-              xprintf("Root opened ok\n");
-              while(1){
-                int res=f_readdir(&Dir,&fno);
-                if(res!=FR_OK || !fno.fname[0]) break; 
-                xprintf("- %s\n",fno.fname);
+            if(f_open(&File[0],"SETTINGS.DAT",FA_WRITE | FA_CREATE_NEW)==FR_OK){
+              unsigned int actual;
+              xprintf("Settings opened ok, writing threshold data\n");
+              f_write(&File[0],threshold,NCHANNELS*sizeof(int32_t),&actual);
+              if(actual<NCHANNELS*sizeof(int32_t)){
+                xprintf("Error writing thresholds, expect problems\n");
               }
-              f_closedir(&Dir);
+              f_close(&File[0]);
             }else{
-              xprintf("Root open failed\n");
+              xprintf("Settings open failed\n");
             }
             f_mount(&FatFs,"",0);
           }else{
             xprintf("Mount failed\n");
+          }
+        }else if(strncmp(buffer,"show",4)==0){
+          int i;
+          for(i=0;i<NCHANNELS;i++){
+            xprintf("Threshold for channel %d is %d\n",i,threshold[i]);
           }
         }
         break;
