@@ -14,12 +14,59 @@
 #include "sqrt.h"
 #include "fatfs/ff.h"
 #include "fatfs/ffconf.h"
+#include "dac_play.h"
 //#include "spi.h"
 
 #define TIMERPROCWAIT 1000
 extern void disk_timerproc(void);
 volatile uint32_t TimingDelay;
 volatile uint16_t TimerProcRemaining;
+
+#define DAC_BUF_SIZE 1024
+uint16_t dac_buf[DAC_BUF_SIZE];
+
+uint16_t sin_data[32]={ 
+  2048,
+  2448,
+  2832,
+  3186,
+  3496,
+  3751,
+  3940,
+  4057,
+  4095,
+  4057,
+  3940,
+  3751,
+  3496,
+  3186,
+  2832,
+  2448,
+  2048,
+  1648,
+  1264,
+  910,
+  600,
+  345,
+  156,
+  39,
+  0,
+  39,
+  156,
+  345,
+  600,
+  910,
+  1264,
+  1648,
+};
+
+void DMA1_Channel3_IRQHandler(void){
+  if(DMA_GetITStatus(DMA2_IT_TC3)){ //Transfer Complete
+    DMA_ClearITPendingBit(DMA2_IT_TC3);
+  }else if(DMA_GetITStatus(DMA2_IT_HT3)){
+    DMA_ClearITPendingBit(DMA2_IT_HT3);
+  }
+}
 
 void Delay(uint32_t delay){
   TimingDelay = delay;
@@ -248,6 +295,13 @@ int main(void) {
   init_adc(operation_channels);
   init_GPIOC_pin();
 
+
+  initialize_dac(dac_buf,DAC_BUF_SIZE);
+  int i;
+  for(i=0;i<DAC_BUF_SIZE;i++){
+    dac_buf[i]=sin_data[i%32];
+  }
+
   usart_open(USART1,9600);
   
 
@@ -349,6 +403,16 @@ int main(void) {
           for(i=0;i<NCHANNELS;i++){
             xprintf("Threshold for channel %d is %d\n",i,threshold[i]);
           }
+        }else if(strncmp(buffer,"sin",3)==0){
+          start_dac();
+          Delay(1024*1024*100);
+#if 0
+          for(i=0;i<1024*1024;i++){
+            Delay(100);
+            DAC_SetChannel1Data(DAC_Align_12b_R,sin_data[i%32]);
+          }
+#endif          
+          stop_dac();
         }
         break;
       case ST_MEASURE:
