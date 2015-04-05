@@ -32,17 +32,16 @@ void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
   DAC_InitStr.DAC_Trigger = DAC_Trigger_T2_TRGO;
   DAC_Init(DAC_Channel_1,&DAC_InitStr);
 
-#if 0  
   RCC_AHBPeriphClockCmd (RCC_AHBPeriph_DMA1,ENABLE);
 
   DMA_DeInit(DMA_Channel_DAC);
-  DMA_InitStr.DMA_PeripheralBaseAddr = (uint32_t)(&DAC->DHR12R1); //??
+  DMA_InitStr.DMA_PeripheralBaseAddr = &DAC->DHR12R1; //??
   DMA_InitStr.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
   DMA_InitStr.DMA_MemoryDataSize = DMA_PeripheralDataSize_HalfWord;
   DMA_InitStr.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStr.DMA_BufferSize = dac_buf_size;
   DMA_InitStr.DMA_Mode = DMA_Mode_Circular;
-  DMA_InitStr.DMA_Priority = DMA_Priority_High;
+  DMA_InitStr.DMA_Priority = DMA_Priority_VeryHigh;
   DMA_InitStr.DMA_M2M = DMA_M2M_Disable;
   
   DMA_InitStr.DMA_MemoryBaseAddr = (uint32_t)dac_buf;
@@ -60,8 +59,8 @@ void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
 
   NVIC_Init(&NVIC_InitStr);
 
-#endif  
 
+#if 0  
   buf=dac_buf;
   buf_size = dac_buf_size;
   NVIC_InitStr.NVIC_IRQChannel = TIM2_IRQn; 
@@ -71,6 +70,7 @@ void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
 
   NVIC_Init(&NVIC_InitStr);
 
+#endif  
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
   TIM_TimeBaseInitTypeDef TIM_base_init;
@@ -82,25 +82,26 @@ void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
 
   TIM_SelectOutputTrigger(TIM_DAC,TIM_TRGOSource_Update);
 
-#if 0
   // Enable all
-  DMA_Cmd(DMA_Channel_DAC/*???*/, ENABLE);
-  DAC_DMACmd(DAC_Channel_1,ENABLE);
-#endif
-  DAC_Cmd(DAC_Channel_1,ENABLE);
 }
 
 
 void start_dac(void){
-  TIM_ITConfig(TIM_DAC,TIM_IT_Update, ENABLE);
+  //TIM_ITConfig(TIM_DAC,TIM_IT_Update, ENABLE);
+  DMA_Cmd(DMA_Channel_DAC/*???*/, ENABLE);
+  DAC_Cmd(DAC_Channel_1,ENABLE);
+  DAC_DMACmd(DAC_Channel_1,ENABLE);
   TIM_Cmd(TIM_DAC,ENABLE);
 }
 
 void stop_dac(void){
   TIM_Cmd(TIM_DAC,DISABLE);
-  TIM_ITConfig(TIM_DAC,TIM_IT_Update, DISABLE);
+  DAC_DMACmd(DAC_Channel_1,DISABLE);
+  DAC_Cmd(DAC_Channel_1,DISABLE);
+  DMA_Cmd(DMA_Channel_DAC/*???*/, DISABLE);
+ // TIM_ITConfig(TIM_DAC,TIM_IT_Update, DISABLE);
 }
-
+#if 0
 void TIM2_IRQHandler(void){
   DAC_SetChannel1Data(DAC_Align_12b_R,buf[cur_addr]);
   cur_addr++;
@@ -109,3 +110,4 @@ void TIM2_IRQHandler(void){
   }
   TIM_ClearITPendingBit(TIM2,TIM_IT_Update);
 }
+#endif

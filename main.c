@@ -60,11 +60,18 @@ uint16_t sin_data[32]={
   1648,
 };
 
+int incr=0;
 void DMA1_Channel3_IRQHandler(void){
-  if(DMA_GetITStatus(DMA2_IT_TC3)){ //Transfer Complete
-    DMA_ClearITPendingBit(DMA2_IT_TC3);
-  }else if(DMA_GetITStatus(DMA2_IT_HT3)){
-    DMA_ClearITPendingBit(DMA2_IT_HT3);
+  if(DMA_GetITStatus(DMA1_IT_TC3)){ //Transfer Complete
+    DMA_ClearITPendingBit(DMA1_IT_TC3);
+    xprintf("DAC Buf %d\n",dac_buf[incr]);
+    xprintf("DHR12R1 %d\n",DAC->DHR12R1);
+    incr++;
+    if(incr>=DAC_BUF_SIZE){
+      incr=0;
+    }
+  }else if(DMA_GetITStatus(DMA1_IT_HT3)){
+    DMA_ClearITPendingBit(DMA1_IT_HT3);
   }
 }
 

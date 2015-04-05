@@ -39,7 +39,7 @@
 #include "diskio.h"
 
 // demo uses a command line option to define this (see Makefile):
-#define STM32_SD_USE_DMA
+//#define STM32_SD_USE_DMA
 #define BOOL int
 #define TRUE 1
 #define FALSE 0
