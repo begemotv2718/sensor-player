@@ -405,7 +405,7 @@ int main(void) {
           }
         }else if(strncmp(buffer,"sin",3)==0){
           start_dac();
-          Delay(1024*1024*100);
+          Delay(20*100000);
 #if 0
           for(i=0;i<1024*1024;i++){
             Delay(100);
