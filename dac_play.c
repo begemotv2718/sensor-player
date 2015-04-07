@@ -4,13 +4,15 @@
 #define DMA_Channel_DAC_IRQn DMA1_Channel3_IRQn 
 //DMA2_Channel3_IRQn
 #define TIM_DAC TIM2
+#define DHR12R1_OFFSET             ((uint32_t)0x00000008)
+#define DAC_DHR8R1_Address      0x40007410
 
 uint16_t *buf;
 uint16_t buf_size;
 volatile uint16_t cur_addr=0;
 
 
-void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
+void initialize_dac(uint8_t *dac_buf,uint16_t dac_buf_size){
   GPIO_InitTypeDef GPIO_InitStr;
   DAC_InitTypeDef DAC_InitStr;
   DMA_InitTypeDef DMA_InitStr;
@@ -35,9 +37,9 @@ void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
   RCC_AHBPeriphClockCmd (RCC_AHBPeriph_DMA1,ENABLE);
 
   DMA_DeInit(DMA_Channel_DAC);
-  DMA_InitStr.DMA_PeripheralBaseAddr = &DAC->DHR12R1; //??
-  DMA_InitStr.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-  DMA_InitStr.DMA_MemoryDataSize = DMA_PeripheralDataSize_HalfWord;
+  DMA_InitStr.DMA_PeripheralBaseAddr = DAC_DHR8R1_Address;//(uint32_t)DAC_BASE+DHR12R1_OFFSET; //??
+  DMA_InitStr.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;//HalfWord;
+  DMA_InitStr.DMA_MemoryDataSize = DMA_PeripheralDataSize_Byte;//HalfWord;
   DMA_InitStr.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStr.DMA_BufferSize = dac_buf_size;
   DMA_InitStr.DMA_Mode = DMA_Mode_Circular;

@@ -8,7 +8,7 @@
 #include "stm32f10x_tim.h"
 #include "misc.h"
 
-void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size);
+void initialize_dac(uint8_t *dac_buf,uint16_t dac_buf_size);
 void start_dac(void);
 void stop_dac(void);
 
