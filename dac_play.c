@@ -114,3 +114,27 @@ void TIM2_IRQHandler(void){
   TIM_ClearITPendingBit(TIM2,TIM_IT_Update);
 }
 #endif
+
+void play_file(struct wav_file *wf,uint16_t *dac_buf, uint16_t dac_buf_size, int (*stop_function)(void)){
+  wav_fill_buffer_uint16(wf,dac_buf,dac_buf_size); //Prefill the buffer
+  start_dac();
+  while(!wav_eof(wf)){
+    while(!flagHalf && !flagTC){
+      if(stop_function()){
+        stop_dac();
+        return;
+      }
+    }
+    if(flagHalf){
+      flagHalf=0;
+      wav_fill_buffer_uint16(wf,&dac_buf[0],dac_buf_size/2);
+    }
+    if(flagTC){
+      flagTC=0;
+      wav_fill_buffer_uint16(wf,&dac_buf[dac_buf_size/2],dac_buf_size/2);
+    }
+
+  }
+  stop_dac();
+  return;
+}
