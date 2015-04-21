@@ -1,4 +1,5 @@
 #include "dac_play.h"
+#include "wav_file.h"
 //DAC Channel1 is either DMA1_Channel3 or DMA2_Channel3
 #define DMA_Channel_DAC DMA1_Channel3 
 #define DMA_Channel_DAC_IRQn DMA1_Channel3_IRQn 
@@ -11,7 +12,7 @@
 uint16_t *buf;
 uint16_t buf_size;
 volatile uint16_t cur_addr=0;
-
+volatile int flagTC=0, flagHalf=0;
 
 void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
   GPIO_InitTypeDef GPIO_InitStr;
@@ -38,7 +39,7 @@ void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
   RCC_AHBPeriphClockCmd (RCC_AHBPeriph_DMA1,ENABLE);
 
   DMA_DeInit(DMA_Channel_DAC);
-  DMA_InitStr.DMA_PeripheralBaseAddr = DAC_DHR12R1_Address;//(uint32_t)DAC_BASE+DHR12R1_OFFSET; //??
+  DMA_InitStr.DMA_PeripheralBaseAddr = (uint32_t)&(DAC->DHR12L1); //DAC_DHR12R1_Address;//??
   DMA_InitStr.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
   DMA_InitStr.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
   DMA_InitStr.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
@@ -78,7 +79,7 @@ void initialize_dac(uint16_t *dac_buf,uint16_t dac_buf_size){
 
   TIM_TimeBaseInitTypeDef TIM_base_init;
   TIM_TimeBaseStructInit(&TIM_base_init);
-  TIM_base_init.TIM_Prescaler = SystemCoreClock/64000 - 1;
+  TIM_base_init.TIM_Prescaler = SystemCoreClock/88200 - 1;
   TIM_base_init.TIM_Period = 2-1;
   TIM_base_init.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(TIM_DAC,&TIM_base_init);
@@ -117,6 +118,8 @@ void TIM2_IRQHandler(void){
 
 void play_file(struct wav_file *wf,uint16_t *dac_buf, uint16_t dac_buf_size, int (*stop_function)(void)){
   wav_fill_buffer_uint16(wf,dac_buf,dac_buf_size); //Prefill the buffer
+  flagHalf=0;
+  flagTC=0;
   start_dac();
   while(!wav_eof(wf)){
     while(!flagHalf && !flagTC){
@@ -137,4 +140,14 @@ void play_file(struct wav_file *wf,uint16_t *dac_buf, uint16_t dac_buf_size, int
   }
   stop_dac();
   return;
+}
+
+void DMA1_Channel3_IRQHandler(void){
+  if(DMA_GetITStatus(DMA1_IT_TC3)){ //Transfer Complete
+    DMA_ClearITPendingBit(DMA1_IT_TC3);
+    flagTC=1;
+  }else if(DMA_GetITStatus(DMA1_IT_HT3)){
+    DMA_ClearITPendingBit(DMA1_IT_HT3);
+    flagHalf=1;
+  }
 }

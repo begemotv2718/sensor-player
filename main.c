@@ -15,6 +15,7 @@
 #include "fatfs/ff.h"
 #include "fatfs/ffconf.h"
 #include "dac_play.h"
+#include "wav_file.h"
 //#include "spi.h"
 
 #define TIMERPROCWAIT 1000
@@ -24,6 +25,11 @@ volatile uint16_t TimerProcRemaining;
 
 #define DAC_BUF_SIZE 1024
 uint16_t dac_buf[DAC_BUF_SIZE];
+struct wav_file wf;
+
+int stop_none(void){
+  return 0;
+}
 
 uint16_t sin_data[32]={ 
   2048,
@@ -60,20 +66,6 @@ uint16_t sin_data[32]={
   1648,
 };
 
-int incr=0;
-void DMA1_Channel3_IRQHandler(void){
-  if(DMA_GetITStatus(DMA1_IT_TC3)){ //Transfer Complete
-    DMA_ClearITPendingBit(DMA1_IT_TC3);
-    xprintf("DAC Buf %d\n",dac_buf[incr]);
-    xprintf("DHR12R1 %d\n",DAC->DHR12R1);
-    incr++;
-    if(incr>=DAC_BUF_SIZE){
-      incr=0;
-    }
-  }else if(DMA_GetITStatus(DMA1_IT_HT3)){
-    DMA_ClearITPendingBit(DMA1_IT_HT3);
-  }
-}
 
 void Delay(uint32_t delay){
   TimingDelay = delay;
@@ -411,15 +403,20 @@ int main(void) {
             xprintf("Threshold for channel %d is %d\n",i,threshold[i]);
           }
         }else if(strncmp(buffer,"sin",3)==0){
+#if 0
           start_dac();
           Delay(20*100000);
-#if 0
-          for(i=0;i<1024*1024;i++){
-            Delay(100);
-            DAC_SetChannel1Data(DAC_Align_12b_R,sin_data[i%32]);
-          }
-#endif          
           stop_dac();
+#endif
+          if(f_mount(&FatFs,"",1)==FR_OK){
+            xprintf("Mount success\n");
+            if(f_open(&File[1],"A.WAV",FA_READ)==FR_OK){
+              wav_open(&File[1],&wf);
+              play_file(&wf,dac_buf,DAC_BUF_SIZE,stop_none);
+              f_close(&File[1]);
+            }
+          } 
+          
         }
         break;
       case ST_MEASURE:

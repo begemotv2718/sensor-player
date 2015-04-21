@@ -4,7 +4,7 @@ TOOLS_PATH=/usr/
 TOOLS_PREFIX=arm-none-eabi-
 TOOLS_VERSION=4.8.4
 
-CFLAGS=-c -mcpu=cortex-m3 -mthumb -Wall -O0 -mapcs-frame -D__thumb2__=1 
+CFLAGS=-c -mcpu=cortex-m3 -mthumb -Wall -O2 -mapcs-frame -D__thumb2__=1 
 CFLAGS+=-msoft-float -gdwarf-2 -mno-sched-prolog -fno-hosted -mtune=cortex-m3 
 CFLAGS+=-march=armv7-m -mfix-cortex-m3-ldrd -ffunction-sections -fdata-sections 
 CFLAGS+=-I./cmsis -I./stm32_lib -I.
@@ -31,7 +31,7 @@ SRC=main.c
 
 OBJ=core_cm3.o system_stm32f10x.o startup_stm32f10x_md_vl.o
 OBJ+=stm32f10x_rcc.o stm32f10x_gpio.o stm32f10x_usart.o  stm32f10x_adc.o stm32f10x_tim.o misc.o 
-OBJ+=usart.o queue.o main.o adc.o dac_play.o xprintf.o sqrt.o stm32f10x_spi.o stm32f10x_dma.o stm32f10x_dac.o
+OBJ+=usart.o queue.o main.o adc.o dac_play.o xprintf.o sqrt.o stm32f10x_spi.o stm32f10x_dma.o stm32f10x_dac.o wav_file.o
 FATFSOBJ1=$(subst .c,.o,$(FATSRC)) 
 FATFSOBJ=$(subst ./fatfs/,,$(FATFSOBJ1))
 
